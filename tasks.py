@@ -216,16 +216,21 @@ def prepare(ctx):
 @task
 def fixtures(ctx):
     print("**************************fixtures********************************")
+    print("******************fixtures: loaddata sample_admin ****************")
     ctx.run("python manage.py loaddata sample_admin \
 --settings={0}".format(_localsettings()), pty=True)
+    print("******************fixtures: loaddata default_oauth_apps_docker.json")
     ctx.run("python manage.py loaddata /tmp/default_oauth_apps_docker.json \
 --settings={0}".format(_localsettings()), pty=True)
+    print("******************fixtures: loaddata default_site.json ************")
     ctx.run("python manage.py loaddata /tmp/default_site.json \
 --settings={0}".format(_localsettings()), pty=True)
-    ctx.run("python manage.py loaddata /usr/src/app/fixtures/initial_data.json \
---settings={0}".format(_localsettings()), pty=True)
-    ctx.run("python manage.py set_all_layers_alternate \
---settings={0}".format(_localsettings()), pty=True)
+#     print("******************fixtures: loaddata initial_data.json ************")
+#     ctx.run("python manage.py loaddata /usr/src/app/fixtures/initial_data.json \
+# --settings={0}".format(_localsettings()), pty=True)
+#     print("******************fixtures: set_all_layers_alternate **************")
+#     ctx.run("python manage.py set_all_layers_alternate \
+# --settings={0}".format(_localsettings()), pty=True)
 #     ctx.run("python manage.py set_all_layers_metadata -d \
 # --settings={0}".format(_localsettings()), pty=True)
 
@@ -383,7 +388,7 @@ def _geoserver_info_provision(url):
     print("Setting GeoServer Admin Password...")
     cat = Catalog(url,
         username=settings.OGC_SERVER_DEFAULT_USER,
-        password=settings.OGC_SERVER_DEFAULT_PASSWORD
+        password=os.getenv('GEOSERVER_ADMIN_DEFAULT_PASSWORD', 'geoserver')
     )
     headers = {
         "Content-type": "application/xml",
