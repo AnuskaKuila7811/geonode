@@ -36,7 +36,10 @@ services:
 
   django:
     restart: unless-stopped
-    image: geonode/geonode:3.1
+    image: 52north/geonode:3.1-k8s
+    build:
+      context: .
+      dockerfile: Dockerfile.k8s
     container_name: django4${COMPOSE_PROJECT_NAME}
     stdin_open: true
     # tty: true

@@ -1,0 +1,5 @@
+FROM geonode/geonode:3.1
+
+COPY ./entrypoint.sh /usr/src/app/entrypoint.sh
+COPY ./tasks.py /usr/src/app/tasks.py
+# COPY ./geonode/settings.py /usr/src/geonode/geonode/settings.py 
