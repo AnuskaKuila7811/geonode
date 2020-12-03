@@ -200,17 +200,17 @@ def prepare(ctx):
     ctx.run("rm -rf /tmp/default_site.json", pty=True)
     _prepare_site_fixture()
     # Updating OAuth2 Service Config
-    oauth_config = "/geoserver_data/data/security/filter/geonode-oauth2/config.xml"
-    ctx.run(
-        'sed -i "s|<cliendId>.*</cliendId>|<cliendId>{client_id}</cliendId>|g" {oauth_config}'.format(
-            client_id=os.environ['OAUTH2_CLIENT_ID'],
-            oauth_config=oauth_config
-        ), pty=True)
-    ctx.run(
-        'sed -i "s|<clientSecret>.*</clientSecret>|<clientSecret>{client_secret}</clientSecret>|g" {oauth_config}'.format(
-            client_secret=os.environ['OAUTH2_CLIENT_SECRET'],
-            oauth_config=oauth_config
-        ), pty=True)
+    #oauth_config = "/geoserver_data/data/security/filter/geonode-oauth2/config.xml"
+    #ctx.run(
+    #    'sed -i "s|<cliendId>.*</cliendId>|<cliendId>{client_id}</cliendId>|g" {oauth_config}'.format(
+    #        client_id=os.environ['OAUTH2_CLIENT_ID'],
+    #        oauth_config=oauth_config
+    #    ), pty=True)
+    #ctx.run(
+    #    'sed -i "s|<clientSecret>.*</clientSecret>|<clientSecret>{client_secret}</clientSecret>|g" {oauth_config}'.format(
+    #        client_secret=os.environ['OAUTH2_CLIENT_SECRET'],
+    #        oauth_config=oauth_config
+    #    ), pty=True)
 
 
 @task
