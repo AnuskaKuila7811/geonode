@@ -26,6 +26,7 @@ from collections import OrderedDict
 from .. import enumerations
 from .arcgis import ArcMapServiceHandler, ArcImageServiceHandler
 from .wms import WmsServiceHandler, GeoNodeServiceHandler
+from .sta import StaServiceHandler
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ def get_service_handler(base_url, proxy_base=None, service_type=enumerations.AUT
         # enumerations.CSW: {"OWS": False, "handler": ServiceHandlerBase},
         # enumerations.HGL: {"OWS": True, "handler": ServiceHandlerBase},  # TODO: verify this
         # enumerations.OGP: {"OWS": False, "handler": ServiceHandlerBase},  # TODO: verify this
+        enumerations.STA: {"OWS": True, "handler": StaServiceHandler},
     })
     if service_type in (enumerations.AUTO, enumerations.OWS):
         if service_type == enumerations.AUTO:

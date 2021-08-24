@@ -32,6 +32,8 @@ OGP = "OGP"
 HGL = "HGL"
 GN_WMS = "GN_WMS"
 GN_CSW = "GN_CSW"
+SOS = "SOS"
+STA = "STA"
 
 LOCAL = "L"
 CASCADED = "C"
@@ -51,6 +53,7 @@ SERVICE_TYPES = (
     (HGL, _('Harvard Geospatial Library')),
     (GN_WMS, _('GeoNode (Web Map Service)')),
     (GN_CSW, _('GeoNode (Catalogue Service)')),
+    (STA, _('SensorThings-API')),
 )
 
 GXP_PTYPES = {
