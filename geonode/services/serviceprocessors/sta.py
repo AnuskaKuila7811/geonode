@@ -173,11 +173,11 @@ class StaServiceHandler(base.ServiceHandlerBase,
 
     @property
     def parsed_service(self):
-        cleaned_url, service, version, request = StaServiceHandler.get_cleaned_url_params(self.url)
+        cleaned_url = self.url
         ogc_server_settings = settings.OGC_SERVER['default']
         _url, _parsed_service = SensorThingsService(
             cleaned_url,
-            version=version,
+            version='1.1',
             proxy_base=None,
             timeout=ogc_server_settings.get('TIMEOUT', 60))
         return _parsed_service
