@@ -58,6 +58,7 @@ class CreateServiceForm(forms.Form):
             # (enumerations.REST_IMG, _('ArcGIS REST ImageServer')),
             # (enumerations.OGP, _('OpenGeoPortal')),
             # (enumerations.HGL, _('Harvard Geospatial Library')),
+            (enumerations.STA, _('SensorThings-API')),
         ),
         initial='AUTO',
     )
