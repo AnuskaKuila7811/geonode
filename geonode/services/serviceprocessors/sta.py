@@ -56,6 +56,7 @@ from geonode.thumbs.thumbnails import create_thumbnail
 
 from owslib import __version__
 from owslib.util import clean_ows_url, http_get, Authentication
+from datetime import datetime, timedelta
 
 from .. import enumerations
 from ..enumerations import CASCADED
@@ -63,6 +64,7 @@ from ..enumerations import INDEXED
 from .. import models
 from .. import utils
 from . import base
+from collections import namedtuple
 
 logger = logging.getLogger(__name__)
 
@@ -72,20 +74,31 @@ REQUEST_HEADERS = {
 DATASTREAMS = 'Datastreams'
 FEATURES_OF_INTEREST = 'FeaturesOfInterest'
 OBSERVED_PROPERTIES = 'ObservedProperties'
+SENSORS = 'Sensors'
+THINGS = 'Things'
 FILTER_OBSERVATION_DATASTREAM_ID_EQ = "?$filter=Observations/Datastream/id eq '"
+FILTER_DATASTREAMS_ID_EQ = "?$filter=Datastreams/id eq '"
+SELECT_ID_NAME = "$select=id,name"
 VALUE = 'value'
 NAME = 'name'
+DESCRIPTION = 'description'
 IOT_ID = '@iot.id'
 IOT_NEXT_LINK = '@iot.nextLink'
+
+Datastream = namedtuple("Datastream",
+                        "id, \
+                      title, \
+                      abstract")
+
 
 def get_proxified_sta_url(url, version='1.1', proxy_base=None):
     """
     clean an STA URL of basic 
     """
-    
+
     if url is None or not url.startswith('http'):
         return url
-   
+
     parsed = urlparse(url)
 
     base_sta_url = urlunparse([
@@ -101,14 +114,15 @@ def get_proxified_sta_url(url, version='1.1', proxy_base=None):
     proxified_url = f"{proxy_base}?url={sta_url}"
     return (version, proxified_url, base_sta_url)
 
+
 def SensorThingsService(url,
-                  version='1.1',
-                  username=None,
-                  password=None,
-                  parse_remote_metadata=False,
-                  timeout=30,
-                  headers=None,
-                  proxy_base=None):
+                        version='1.1',
+                        username=None,
+                        password=None,
+                        parse_remote_metadata=False,
+                        timeout=30,
+                        headers=None,
+                        proxy_base=None):
     """
     API for SensorThings-API (STA) methods and metadata.
     """
@@ -156,8 +170,8 @@ def SensorThingsService(url,
     raise NotImplementedError(
         f'The STA version ({version}) you requested is not implemented. Please use 1.0 or 1.1.')
 
-class StaServiceHandler(base.ServiceHandlerBase,
-                        base.CascadableServiceHandlerMixin):
+
+class StaServiceHandler(base.ServiceHandlerBase):
     """Remote service handler for OGC STA services"""
 
     service_type = enumerations.STA
@@ -168,7 +182,7 @@ class StaServiceHandler(base.ServiceHandlerBase,
             settings.SITEURL, reverse('proxy'))
         self.url = url
         self._parsed_service = None
-        self.indexing_method = INDEXED 
+        self.indexing_method = INDEXED
         self.name = slugify(self.url)[:255]
 
     @property
@@ -200,13 +214,13 @@ class StaServiceHandler(base.ServiceHandlerBase,
             owner=owner,
             parent=parent,
             metadata_only=True,
-            version=11,
+            version=1.1,
             name=self.name,
             title=self.name,
             abstract=_(
                 "Not provided"),
             online_resource=self.parsed_service.url,
-            
+
         )
         """
         version=self.parsed_service.identification.version,
@@ -220,10 +234,33 @@ class StaServiceHandler(base.ServiceHandlerBase,
         return instance
 
     def get_keywords(self):
-        return self.parsed_service.getObservedPropertyNames
+        keywords = set()
+        keywords.update(self.parsed_service.getObservedPropertyNames())
+        keywords.update(self.parsed_service.getFeatureOfInterestNames())
+        keywords.update(self.parsed_service.getSensorNames())
+        keywords.update(self.parsed_service.getThingNames())
+        return keywords
+
+    def _get_keywords_for_resource(self, resource_id):
+        keywords = set()
+        keywords.update(self.parsed_service.getObservedPropertyNamesForDatastream(resource_id))
+        keywords.update(self.parsed_service.getFeatureOfInterestNamesForDatastream(resource_id))
+        keywords.update(self.parsed_service.getSensorNamesForDatastream(resource_id))
+        keywords.update(self.parsed_service.getThingNamesForDatastream(resource_id))
+        return keywords
 
     def get_resource(self, resource_id):
         return self.parsed_service.getDatastream(identifier=resource_id)
+        """
+        ll = None
+        logger.error(f"Cache {ll}")
+        try:
+            ll = self.parsed_service.getDatastream(identifier=resource_id)
+            logger.error(f"Cache {ll}")
+        except Exception as e:
+            logger.exception(e)
+        return self._dataset_meta(ll) if ll else None
+        """
 
     def get_resources(self):
         """Return an iterable with the service's resources.
@@ -234,7 +271,24 @@ class StaServiceHandler(base.ServiceHandlerBase,
         contents_gen = self.parsed_service.getDatastreams()
         return (r for r in contents_gen if not any(r.children))
         """
-        return self.parsed_service.getDatastreams()
+        try:
+            return self._parse_datasets(self.parsed_service.getDatastreams())
+        except Exception:
+            traceback.print_exc()
+            return None
+
+    def _parse_datasets(self, datastreams):
+        map_datasets = []
+        for ds in datastreams:
+            map_datasets.append(self._dataset_meta(ds))
+        return map_datasets
+
+    def _dataset_meta(self, datastream):
+        _ll = {}
+        _ll['id'] = datastream[IOT_ID] if IOT_ID in datastream else None
+        _ll['title'] = datastream[NAME] if NAME in datastream else None
+        _ll['abstract'] = datastream[DESCRIPTION] if DESCRIPTION in datastream else None
+        return Datastream(**_ll)
 
     def harvest_resource(self, resource_id, geonode_service):
         """Harvest a single resource from the service
@@ -249,7 +303,6 @@ class StaServiceHandler(base.ServiceHandlerBase,
 
         """
         dataset_meta = self.get_resource(resource_id)
-        logger.debug(f"dataset_meta: {dataset_meta}")
         resource_fields = self._get_indexed_dataset_fields(dataset_meta)
         keywords = resource_fields.pop("keywords")
         existance_test_qs = Dataset.objects.filter(
@@ -268,12 +321,12 @@ class StaServiceHandler(base.ServiceHandlerBase,
             resource_fields["is_published"] = False
         geonode_dataset = self._create_dataset(geonode_service, **resource_fields)
         self._create_dataset_service_link(geonode_dataset)
-        self._create_dataset_legend_link(geonode_dataset)
-        self._create_dataset_thumbnail(geonode_dataset)
+        # self._create_dataset_legend_link(geonode_dataset)
+        # self._create_dataset_thumbnail(geonode_dataset)
 
     def has_resources(self):
         return self.parsed_service.hasDatastreams()
-    
+
     def _create_dataset(self, geonode_service, **resource_fields):
         # bear in mind that in ``geonode.layers.models`` there is a
         # ``pre_save_dataset`` function handler that is connected to the
@@ -302,50 +355,6 @@ class StaServiceHandler(base.ServiceHandlerBase,
 
         return geonode_dataset
 
-    def _create_dataset_thumbnail(self, geonode_dataset):
-        """Create a thumbnail with a WMS request."""
-        create_thumbnail(
-            instance=geonode_dataset,
-            wms_version=self.parsed_service.version,
-            bbox=geonode_dataset.bbox,
-            forced_crs=geonode_dataset.srid if 'EPSG:' in str(geonode_dataset.srid) else f'EPSG:{geonode_dataset.srid}',
-            overwrite=True,
-        )
-
-    def _create_dataset_legend_link(self, geonode_dataset):
-        """Get the layer's legend and save it locally
-
-        Regardless of the service being INDEXED or CASCADED we're always
-        creating the legend by making a request directly to the original
-        service.
-        """
-        cleaned_url, service, version, request = StaServiceHandler.get_cleaned_url_params(self.url)
-        _p_url = urlparse(self.url)
-        legend_url = get_legend_url(
-            geonode_dataset, "",
-            service_url=f"{_p_url.scheme}://{_p_url.netloc}{_p_url.path}",
-            dataset_name=geonode_dataset.name,
-            version=version,
-            params=_p_url.query
-        )
-        logger.debug(f"legend_url: {legend_url}")
-        try:
-            Link.objects.get_or_create(
-                resource=geonode_dataset.resourcebase_ptr,
-                url=legend_url,
-                name='Legend',
-                defaults={
-                    "extension": 'png',
-                    "name": 'Legend',
-                    "url": legend_url,
-                    "mime": 'image/png',
-                    "link_type": 'image',
-                }
-            )
-        except ResourceBase.DoesNotExist as e:
-            logger.exception(e)
-        return legend_url
-
     def _create_dataset_service_link(self, geonode_dataset):
         ogc_sta_url = geonode_dataset.ows_url
         ogc_sta_name = f'OGC STA: {geonode_dataset.store} Service'
@@ -364,7 +373,7 @@ class StaServiceHandler(base.ServiceHandlerBase,
                     link_type=ogc_sta_link_type
                 )
             )
-
+    
     def __get_bbox(self, dataset_meta):
         bbox = dataset_meta['observedArea']
         if bbox is not None:
@@ -385,28 +394,30 @@ class StaServiceHandler(base.ServiceHandlerBase,
 
     def _get_indexed_dataset_fields(self, dataset_meta):
         bbox = self.__get_bbox(dataset_meta)
+        typename = slugify(f"{dataset_meta[IOT_ID]}-{''.join(c for c in dataset_meta[NAME] if ord(c) < 128)}")
         return {
             "name": dataset_meta[NAME],
             "store": self.name,
             "subtype": "remote",
             "workspace": "remoteWorkspace",
-            "typename": dataset_meta[NAME],
+            "typename": typename,
             "alternate": dataset_meta[NAME],
             "title": dataset_meta[NAME],
-            "abstract": dataset_meta['description'],
+            "abstract": dataset_meta[DESCRIPTION],
             "bbox_polygon": BBOXHelper.from_xy([bbox[0], bbox[2], bbox[1], bbox[3]]).as_polygon(),
             "srid": bbox[4] if len(bbox) > 4 else "EPSG:4326",
-            "keywords": [keyword[:100] for keyword in self.parsed_service.getObservedPropertyNamesForDatastream(dataset_meta[IOT_ID])],
+            "keywords": [keyword[:100] for keyword in self._get_keywords_for_resource(resource_id=dataset_meta[IOT_ID])],
         }
+
 
 class BaseSensorThingsService:
     """ Abstraction of OGC SensorThingsAPI """
 
-    def __init__(self, url: str, timeout: int = 30,
-                 headers: dict = None, auth: Authentication = None):
+    def __init__(self, url, version='1.1', xml=None, username=None, password=None,
+                 parse_remote_metadata=False, headers=None, timeout=30, auth=None):
         """ """
         if '?' in url:
-                self.url, self.url_query_string = url.split('?')
+            self.url, self.url_query_string = url.split('?')
         else:
             self.url = url.rstrip('/') + '/'
             self.url_query_string = None
@@ -416,6 +427,7 @@ class BaseSensorThingsService:
         if headers:
             self.headers.update(headers)
         self.auth = auth
+        self.datastreams = None
 
     def __get_json_data(self, url):
         return http_get(url=url, headers=self.headers, auth=self.auth).json()
@@ -430,7 +442,10 @@ class BaseSensorThingsService:
         return self.__get_value(IOT_NEXT_LINK, response)
 
     def __get_name(self, data):
-        return [item[NAME] for item in data]
+        l = list()
+        for item in data:
+            l.append(item[NAME] if item[NAME] is not None else item[IOT_ID])
+        return l
 
     def __get_elements(self, url):
         response = self.__get_json_data(url)
@@ -442,40 +457,79 @@ class BaseSensorThingsService:
                     response = self.__get_json_data(nextLink).json()
                     if response is not None:
                         nextLink = self.__get_next_link(response)
-                        temp =  self.__get_value(VALUE, response)
+                        temp = self.__get_value(VALUE, response)
                         if response is not None:
                             elements.extend(temp)
                 return elements
-    
+
     def __get_by_identifier(self, resource, identifier):
-       return self.url.__add__(resource).__add__('(\'').__add__(identifier).__add__('\')') 
+        data = self.__get_json_data(self.url.__add__(resource).__add__('(\'').__add__(identifier).__add__('\')'))
+        if data['error'] is not None:
+            data = self.__get_json_data(self.url.__add__(resource).__add__('(').__add__(identifier).__add__(')'))
+        return data
+
+    def __update_datastreams(self):
+        self.datastreams = self.__get_elements(self.url.__add__(DATASTREAMS))
+        self.lastUpdate = datetime.now()
 
     def getDatastreams(self):
-        return self.__get_elements(self.url.__add__(DATASTREAMS))
+        if self.datastreams is None:
+            self.__update_datastreams()
+        elif datetime.now() - timedelta(hours=1) > self.lastUpdate:
+            self.__update_datastreams()
+        return self.datastreams
 
     def getDatastream(self, identifier):
         return self.__get_by_identifier(DATASTREAMS, identifier)
 
     def hasDatastreams(self):
-        data = self.url.__add__(DATASTREAMS).__add__('?$count=true&$top=1')
-        count = self.__get_value('@iot.count',data)
+        data = self.__get_json_data(self.url.__add__(DATASTREAMS).__add__('?$count=true&$top=1'))
+        count = self.__get_value('@iot.count', data)
         return True if count is not None and count > 0 else False
 
     def getFeaturesOfInterest(self):
         return self.__get_elements(self.url.__add__(FEATURES_OF_INTEREST))
-    
+
     def getFeaturesForDatastream(self, id):
         query = self.url.__add__(FEATURES_OF_INTEREST).__add__(FILTER_OBSERVATION_DATASTREAM_ID_EQ).__add__(id).__add__("'")
         return self.__get_elements(query)
 
+    def getFeatureOfInterestNamesForDatastream(self, id):
+        query = self.url.__add__(FEATURES_OF_INTEREST).__add__(FILTER_OBSERVATION_DATASTREAM_ID_EQ).__add__(id).__add__("'").__add__("&").__add__(SELECT_ID_NAME)
+        data = self.__get_elements(query)
+        return self.__get_name(data)
+
+    def getFeatureOfInterestNames(self):
+        data = self.__get_elements(self.url.__add__(FEATURES_OF_INTEREST).__add__("?").__add__(SELECT_ID_NAME))
+        return self.__get_name(data)
+
     def getObservedPropertyNames(self):
-        data = self.__get_elements(self.url.__add__(OBSERVED_PROPERTIES))
+        data = self.__get_elements(self.url.__add__(OBSERVED_PROPERTIES).__add__("?").__add__(SELECT_ID_NAME))
         return self.__get_name(data)
 
     def getObservedPropertyNamesForDatastream(self, id):
-        query = self.url.__add__(OBSERVED_PROPERTIES).__add__(FILTER_OBSERVATION_DATASTREAM_ID_EQ).__add__(id).__add__("'")
+        query = self.url.__add__(OBSERVED_PROPERTIES).__add__(FILTER_DATASTREAMS_ID_EQ).__add__(id).__add__("'").__add__("&").__add__(SELECT_ID_NAME)
         data = self.__get_elements(query)
         return self.__get_name(data)
+
+    def getSensorNames(self):
+        data = self.__get_elements(self.url.__add__(SENSORS).__add__("?").__add__(SELECT_ID_NAME))
+        return self.__get_name(data)
+
+    def getSensorNamesForDatastream(self, id):
+        query = self.url.__add__(SENSORS).__add__(FILTER_DATASTREAMS_ID_EQ).__add__(id).__add__("'").__add__("&").__add__(SELECT_ID_NAME)
+        data = self.__get_elements(query)
+        return self.__get_name(data)
+
+    def getThingNames(self):
+        data = self.__get_elements(self.url.__add__(THINGS).__add__("?").__add__(SELECT_ID_NAME))
+        return self.__get_name(data)
+
+    def getThingNamesForDatastream(self, id):
+        query = self.url.__add__(THINGS).__add__(FILTER_DATASTREAMS_ID_EQ).__add__(id).__add__("'").__add__("&").__add__(SELECT_ID_NAME)
+        data = self.__get_elements(query)
+        return self.__get_name(data)
+
 
 class SensorThingsService_1_1(BaseSensorThingsService):
 
