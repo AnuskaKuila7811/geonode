@@ -395,6 +395,13 @@ class StaServiceHandler(base.ServiceHandlerBase):
     def _get_indexed_dataset_fields(self, dataset_meta):
         bbox = self.__get_bbox(dataset_meta)
         typename = slugify(f"{dataset_meta[IOT_ID]}-{''.join(c for c in dataset_meta[NAME] if ord(c) < 128)}")
+        temporalStart = None
+        temporalEnd = None
+        phenomenonTime = dataset_meta['phenomenonTime']
+        if phenomenonTime is not None:
+            pts = phenomenonTime.split('/')
+            temporalStart = pts[0]
+            temporalEnd = pts[1]
         return {
             "name": dataset_meta[NAME],
             "store": self.name,
@@ -407,6 +414,8 @@ class StaServiceHandler(base.ServiceHandlerBase):
             "bbox_polygon": BBOXHelper.from_xy([bbox[0], bbox[2], bbox[1], bbox[3]]).as_polygon(),
             "srid": bbox[4] if len(bbox) > 4 else "EPSG:4326",
             "keywords": [keyword[:100] for keyword in self._get_keywords_for_resource(resource_id=dataset_meta[IOT_ID])],
+            "temporal_extent_start": temporalStart,
+            "temporal_extent_end": temporalEnd,
         }
 
 
