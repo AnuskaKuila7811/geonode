@@ -411,7 +411,7 @@ class StaServiceHandler(base.ServiceHandlerBase):
             "alternate": dataset_meta[NAME],
             "title": dataset_meta[NAME],
             "abstract": dataset_meta[DESCRIPTION],
-            "bbox_polygon": BBOXHelper.from_xy([bbox[0], bbox[2], bbox[1], bbox[3]]).as_polygon(),
+            "bbox_polygon": BBOXHelper.from_xy([bbox[0], bbox[1], bbox[2], bbox[3]]).as_polygon(),
             "srid": bbox[4] if len(bbox) > 4 else "EPSG:4326",
             "keywords": [keyword[:100] for keyword in self._get_keywords_for_resource(resource_id=dataset_meta[IOT_ID])],
             "temporal_extent_start": temporalStart,
