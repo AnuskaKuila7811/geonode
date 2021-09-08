@@ -26,40 +26,29 @@ import geojson
 from uuid import uuid4
 from urllib.parse import (
     urljoin,
-    unquote,
     quote,
     urlparse,
-    urlsplit,
-    urlunparse,
-    urlencode,
-    parse_qsl,
-    ParseResult,
+    urlunparse
 )
 
 from django.conf import settings
 from django.urls import reverse
-from django.db.models import Q
 from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext as _
 
 from geonode.base import enumerations as base_enumerations
 from geonode.base.models import (
-    Link,
-    ResourceBase,
-    TopicCategory)
+    Link)
 from geonode.layers.models import Dataset
 from geonode.base.bbox_utils import BBOXHelper
-from geonode.layers.utils import resolve_regions
-from geonode.utils import http_client, get_legend_url
 from geonode.resource.manager import resource_manager
-from geonode.thumbs.thumbnails import create_thumbnail
+
 
 from owslib import __version__
-from owslib.util import clean_ows_url, http_get, Authentication
+from owslib.util import http_get
 from datetime import datetime, timedelta
 
 from .. import enumerations
-from ..enumerations import CASCADED
 from ..enumerations import INDEXED
 from .. import models
 from .. import utils
@@ -403,12 +392,12 @@ class StaServiceHandler(base.ServiceHandlerBase):
             temporalStart = pts[0]
             temporalEnd = pts[1]
         return {
-            "name": dataset_meta[NAME],
+            "name": dataset_meta[IOT_ID],
             "store": self.name,
             "subtype": "remote",
             "workspace": "remoteWorkspace",
             "typename": typename,
-            "alternate": dataset_meta[NAME],
+            "alternate": dataset_meta[IOT_ID],
             "title": dataset_meta[NAME],
             "abstract": dataset_meta[DESCRIPTION],
             "bbox_polygon": BBOXHelper.from_xy([bbox[0], bbox[1], bbox[2], bbox[3]]).as_polygon(),

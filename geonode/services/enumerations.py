@@ -54,6 +54,7 @@ SERVICE_TYPES = (
     (GN_WMS, _('GeoNode (Web Map Service)')),
     (GN_CSW, _('GeoNode (Catalogue Service)')),
     (STA, _('SensorThings-API')),
+    (SOS, _('Sensor Observation Service')),
 )
 
 GXP_PTYPES = {
@@ -63,6 +64,7 @@ GXP_PTYPES = {
     'WFS': 'gxp_wmscsource',
     'WCS': 'gxp_wmscsource',
     'STA': 'gxp_wmscsource',
+    'SOS': 'gxp_wmscsource',
     'REST_MAP': 'gxp_arcrestsource',
     'REST_IMG': 'gxp_arcrestsource',
     'HGL': 'gxp_hglsource',

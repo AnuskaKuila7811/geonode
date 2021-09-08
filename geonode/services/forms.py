@@ -59,6 +59,7 @@ class CreateServiceForm(forms.Form):
             # (enumerations.OGP, _('OpenGeoPortal')),
             # (enumerations.HGL, _('Harvard Geospatial Library')),
             (enumerations.STA, _('SensorThings-API')),
+            (enumerations.SOS, _('Sensor Observation Service')),
         ),
         initial='AUTO',
     )
