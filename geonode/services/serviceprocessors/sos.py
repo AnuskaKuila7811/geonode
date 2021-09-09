@@ -91,7 +91,6 @@ def SensorObservationService(url,
     @param timeout: time (in seconds) after which requests should timeout
     @return: initialized SensorObservationService_2_0_0 object
     '''
-
     if not proxy_base:
         clean_url = clean_ows_url(url)
         base_ows_url = clean_url
@@ -110,7 +109,8 @@ def SensorObservationService(url,
             )
         )
     elif version in ['2.0.0', '2.0']:
-        return (            base_ows_url,
+        return (
+            base_ows_url,
             sos_2_0_0.sos_2_0_0.__new__(sos_2_0_0.sos_2_0_0,
                 clean_url, version=version, xml=xml,
                 username=username, password=password
