@@ -178,15 +178,13 @@ class StaServiceHandler(base.ServiceHandlerBase):
     def parsed_service(self):
         cleaned_url = self.url
         ogc_server_settings = settings.OGC_SERVER['default']
-        _url, _parsed_service = SensorThingsService(
-            cleaned_url,
-            version='1.1',
-            proxy_base=None,
-            timeout=ogc_server_settings.get('TIMEOUT', 60))
-        return _parsed_service
-
-    def create_cascaded_store(self):
-        return None
+        if self._parsed_service is None:
+            _url, self._parsed_service = SensorThingsService(
+                cleaned_url,
+                version='1.1',
+                proxy_base=None,
+                timeout=ogc_server_settings.get('TIMEOUT', 60))
+        return self._parsed_service
 
     def create_geonode_service(self, owner, parent=None):
         """Create a new geonode.service.models.Service instance
