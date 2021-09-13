@@ -54,7 +54,6 @@ from owslib.sos import sos200
 from owslib.util import clean_ows_url
 
 from .. import enumerations
-from ..enumerations import CASCADED
 from ..enumerations import INDEXED
 from .. import models
 from .. import utils
@@ -120,8 +119,7 @@ def SensorObservationService(url,
         f'The SOS version ({version}) you requested is not implemented. Please use 1.0.0 or 2.0.0.')
 
 
-class SosServiceHandler(base.ServiceHandlerBase,
-                        base.CascadableServiceHandlerMixin):
+class SosServiceHandler(base.ServiceHandlerBase):
     """Remote service handler for OGC SOS services"""
 
     service_type = enumerations.SOS
@@ -168,20 +166,6 @@ class SosServiceHandler(base.ServiceHandlerBase,
             proxy_base=None)
         return _parsed_service
 
-    def create_cascaded_store(self, service):
-        ogc_sos_url = service.service_url
-        ogc_sos_get_capabilities = service.operations.get('GetCapabilities', None)
-        if ogc_sos_get_capabilities and ogc_sos_get_capabilities.get('methods', None):
-            for _op_method in ogc_sos_get_capabilities.get('methods'):
-                if _op_method.get('type', None).upper() == 'GET' and _op_method.get('url', None):
-                    ogc_sos_url = _op_method.get('url')
-
-        store = self._get_store(create=True)
-        store.capabilitiesURL = ogc_sos_url
-        cat = store.catalog
-        cat.save(store)
-        return store
-
     def create_geonode_service(self, owner, parent=None):
         """Create a new geonode.service.models.Service instance
         :arg owner: The user who will own the service instance
@@ -227,7 +211,7 @@ class SosServiceHandler(base.ServiceHandlerBase,
             abstract=str(self.parsed_service.identification.abstract).encode("utf-8", "ignore").decode('utf-8') or _(
                 "Not provided"),
             operations=operations,
-            online_resource=self.parsed_service.provider.url,
+            online_resource=self.parsed_service.provider.url if self.parsed_service.provider.url.startswith("http") else None,
         )
         return instance
 
@@ -402,25 +386,3 @@ class SosServiceHandler(base.ServiceHandlerBase,
             "temporal_extent_start": offering.begin_position,
             "temporal_extent_end": offering.end_position,
         }
-
-    def _get_store(self, create=True):
-        """Return the geoserver store associated with this service.
-
-        The store may optionally be created if it doesn't exist already.
-        Store is assumed to be (and created) named after the instance's name
-        and belongs to the default geonode workspace for cascaded layers.
-
-        """
-        workspace = base.get_geoserver_cascading_workspace(create=create)
-        cat = workspace.catalog
-        store = cat.get_store(self.name, workspace=workspace)
-        logger.debug(f"name: {self.name}")
-        logger.debug(f"store: {store}")
-        if store is None and create:  # store did not exist. Create it
-            store = cat.create_sosstore(
-                name=self.name,
-                workspace=workspace,
-                user=cat.username,
-                password=cat.password
-            )
-        return store
