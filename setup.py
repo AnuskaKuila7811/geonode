@@ -36,4 +36,8 @@ setup(
         "": ["templates/*.*"],  # noqa
         "templates": ["*.*"],
     },
+    exclude_package_data={
+        "": ["uploaded/*.*"],  # noqa
+        "uploaded": ["*.*"],
+    }
 )
