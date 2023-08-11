@@ -2325,10 +2325,3 @@ FACET_PROVIDERS = (
     "geonode.facets.providers.thesaurus.ThesaurusFacetProvider",
     "geonode.facets.providers.region.RegionFacetProvider",
 )
-
-
-# custom settings (optional)
-try:
-    from .settings_override import *
-except ImportError:
-    pass
