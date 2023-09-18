@@ -15,7 +15,7 @@ env:
 on:
   push:
     branches:
-      - "52n-master"
+      - "52n-4.1.x"
 
 jobs:
   build_and_push_geonode:
