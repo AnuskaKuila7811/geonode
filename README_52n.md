@@ -5,7 +5,7 @@ This image is built from a fork of [Geonode](https://github.com/geonode/geonode)
 
 However, we are interested to stay as close to upstream as possible, to benefit from ongoing development, but also to contribute features and fixes we develop in our projects.
 
-Starting from version `4` this image is built from the `52n-master` branch of the [`52north/geonode` repository](https://github.com/52North/geonode/tree/52n-master).
+Starting from version `4` this image is built from the `52n-4.1.x` branch of the [`52north/geonode` repository](https://github.com/52North/geonode/tree/52n-4.1.x).
 The repository builds and publishes three images:
 
 * [`52north/geonode`](https://hub.docker.com/r/52north/geonode) (this image)
