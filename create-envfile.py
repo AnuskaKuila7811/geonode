@@ -58,7 +58,7 @@ def generate_env_file(args):
     if args.file and not os.path.isfile(args.file):
         logger.error(f"File does not exists: {args.file}")
         raise FileNotFoundError
-
+#for comment
     if args.https and not args.email:
         raise Exception("With HTTPS enabled, the email parameter is required")
 
